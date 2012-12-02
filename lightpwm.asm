@@ -84,7 +84,7 @@ MainLoop
     bsf     PORTB,RB0
     bsf     PORTB,RB1
 	
-Load up I2C data
+;Load Up I2C data
 	lfsr	FSR0,RxBuffer		;Lets load some data into this
 	movlw	64
 	movwf	POSTINC0			;1
