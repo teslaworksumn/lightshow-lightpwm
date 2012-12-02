@@ -83,85 +83,31 @@ Main
 MainLoop
     bsf     PORTB,RB0
     bsf     PORTB,RB1
-    
-; First loop, synchronizing with the transmitter
-
-WaitBreak
-    btfsc   RCSTA,FERR
-    bra     GotBreak
-    btfss   RCSTA,OERR
-    bra     WaitBreak
-    bcf     RCSTA,CREN
-    bsf     RCSTA,CREN
-
-GotBreak
-    movf    RCREG,W                 ;Read the Receive buffer to clear the error condition
-
-
-;Second loop, waiting for the START code
-WaitForStart
-    btfss   PIR1,RCIF               ;Wait until a byte is correctly received
-    bra     WaitForStart
-    btfsc   RCSTA,FERR              ;Got a byte
-    bra     GotBreak
-    movf    RCREG,W
-
-; Check for the START code value, if it is not 0, ignore the rest of the frame
-    andlw   0xff
-    bnz     MainLoop                ;Ignore the rest of the frame if not zero 
-  
-
-
-; Init receive counter and buffer pointer        
-    clrf    CountL
-    clrf    CountH
-    lfsr    FSR0,RxBuffer
-
-; Third loop, receiving 512 bytes of data
-WaitForData
-    btfsc   RCSTA,FERR          ;If a new framing error is detected (error or short frame)
-    bra     RXend               ; the rest of the frame is ignored and a new synchronization
-                                ; is attempted
-
-    btfss   PIR1,RCIF           ;Wait until a byte is correctly received
-    bra     WaitForData
-    movf    RCREG,W
-    bcf     PORTB,RB1           ;Green LED on when DMX is fully in
-
-
-MoveData
-    movwf   POSTINC0            ;Move the received data to the buffer 
-                                ; (auto-incrementing pointer)
-    incf    CountL,F            ;Increment 16-bit counter
-    btfss   STATUS,C
-    bra     WaitForData
-    incf    CountH,F
-
-    btfss   CountH,1            ;Check if 512 bytes of data received
-    bra     WaitForData
-
-
-;******************************************************************************
+	
+Load up I2C data
+	lfsr	FSR0,RxBuffer		;Lets load some data into this
+	movlw	64
+	movwf	POSTINC0			;1
+	movwf	POSTINC0			;2
+	movwf	POSTINC0			;3
+	movwf	POSTINC0			;4
+	movwf	POSTINC0			;5
+	movwf	POSTINC0			;6
+	movwf	POSTINC0			;7
+	movwf	POSTINC0			;8
+	movwf	POSTINC0			;9
+	movwf	POSTINC0			;10
+	movwf	POSTINC0			;11
+	movwf	POSTINC0			;12
+	movwf	POSTINC0			;13
+	movwf	POSTINC0			;14
+	movwf	POSTINC0			;15
+	movwf	POSTINC0			;16
 
 RXend
     lfsr    FSR0,RxBuffer       ;Use FSR0 to address the receiver buffer
 
 GetData
-; Calculate the starting DMX address
-    movf    PORTA,W             ;Load raw pins
-    rlncf   WREG,W              ;Shift bits left so DIP switch moves
-    rlncf   WREG,W              ; in 16-ch increments
-    rlncf   WREG,W
-    rlncf   WREG,W
-    andlw   b'11110000'         ;Mask the top 4 bits only
-    addwf   FSR0L               ;Move the calculated DMX starting address
-    movlw   0x00                ; to the low bits of the channel register
-    addwfc  FSR0H
-                                   
-    movlw   0x00                ;Clear WREG for high channel
-    btfsc   PORTA,RA5           ;Test if hightest (256) dip is on
-    bsf     WREG,0              ; and if it is
-    addwf   FSR0H               ; move it to the offset register
                                  
 I2CTransmit
     call    I2CStart            ;Send the I2C start signal
